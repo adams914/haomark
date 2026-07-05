@@ -6,7 +6,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-blue)](https://v2.tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev/)
 
-因为 TypeDown 打开 .md 文件越来越慢、免费版也停更了，于是自己搓了一个。
+因为 TypeDown 打开 .md 文件越来越慢（30 秒起步），于是自己搓了一个。
 
 没有臃肿的 Chromium 套壳，安装包只有 4.9MB——TypeDown 的二十分之一。.md 文件双击秒开，Ctrl+S 写回原文件，实时渲染的编辑体验对标 Obsidian。
 
