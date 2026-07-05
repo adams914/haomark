@@ -1,0 +1,27 @@
+# 依赖
+node_modules
+.pnpm-store
+
+# 构建产物
+dist
+dist-ssr
+*.local
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/Cargo.lock
+src-tauri/gen
+
+# Vite
+.vite
+
+# 编辑器
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+
+# 系统
+*.log
