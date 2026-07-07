@@ -15,6 +15,7 @@ import {
 } from './lib/fileIO'
 import { useTheme } from './lib/useTheme'
 import { addRecent, type RecentFile } from './lib/recentFiles'
+import { updateWindowTitle } from './lib/windowTitle'
 import welcomeSrc from './samples/welcome.md?raw'
 
 const FONT_KEY = 'md-viewer-fontsize'
@@ -47,6 +48,11 @@ export default function App() {
       }
     })
   }, [])
+
+  // 文件名 / 脏标记变化时，同步窗口标题（任务栏/Alt+Tab 显示文件名）
+  useEffect(() => {
+    void updateWindowTitle(fileName, dirty)
+  }, [fileName, dirty])
 
   const handleChange = useCallback((v: string) => {
     setSource(v)
