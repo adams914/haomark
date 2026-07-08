@@ -1,6 +1,6 @@
 [package]
 name = "haoji"
-version = "1.0.1"
+version = "1.0.2"
 description = "好记 · 轻量 Markdown 编辑器"
 authors = ["haomark"]
 license = "MIT"

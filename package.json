@@ -1,7 +1,7 @@
 {
   "name": "haomark",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "好记 · 轻量 Markdown 编辑器",
   "scripts": {
