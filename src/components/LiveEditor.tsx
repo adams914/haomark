@@ -30,6 +30,12 @@ interface Props {
   viewMode: ViewMode
   /** 编辑器字号 */
   fontSize?: number
+  /** 拼写检查（v2.0 设置）*/
+  spellcheck?: boolean
+  /** 源码模式行号（v2.0 设置）*/
+  showLineNumbers?: boolean
+  /** 软换行（v2.0 设置）*/
+  lineWrapping?: boolean
   /** 光标所在行变化时回调（1 基），供大纲高亮 */
   onCursorLine?: (line: number) => void
 }
@@ -66,7 +72,7 @@ function wrapSelection(view: EditorView, before: string, after: string = before)
 }
 
 const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
-  { value, onChange, onSave, onSaveAll, viewMode, fontSize = 15, onCursorLine },
+  { value, onChange, onSave, onSaveAll, viewMode, fontSize = 15, spellcheck = false, showLineNumbers = true, lineWrapping = true, onCursorLine },
   ref,
 ) {
   const viewRef = useRef<EditorView | null>(null)
@@ -150,7 +156,8 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
 
   const extensions = useMemo<Extension[]>(() => {
     const base: Extension[] = [
-      EditorView.lineWrapping,
+      // 软换行：可由设置开关
+      ...(lineWrapping ? [EditorView.lineWrapping] : []),
       keymap,
       cursorTrackPlugin,
       markdown({ base: markdownLanguage, codeLanguages: languages }),
@@ -158,8 +165,13 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
     if (viewMode === 'live') {
       return [highlightActiveLine(), ...base, livePreviewPlugin, blockField, blockAtomicRanges]
     }
-    return [lineNumbers(), highlightActiveLine(), ...base]
-  }, [viewMode, keymap, cursorTrackPlugin])
+    // 源码模式：行号可由设置开关
+    return [
+      ...(showLineNumbers ? [lineNumbers()] : []),
+      highlightActiveLine(),
+      ...base,
+    ]
+  }, [viewMode, keymap, cursorTrackPlugin, showLineNumbers, lineWrapping])
 
   return (
     <CodeMirror
@@ -169,13 +181,15 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
       className="cm-editor-wrap"
       height="100%"
       style={{ height: '100%', fontSize }}
+      // 拼写检查：直接透传到 CodeMirror 的 content DOM
+      spellCheck={spellcheck}
       onCreateEditor={(view) => {
         viewRef.current = view
       }}
       basicSetup={{
-        lineNumbers: viewMode === 'source',
+        lineNumbers: viewMode === 'source' && showLineNumbers,
         highlightActiveLine: true,
-        highlightActiveLineGutter: viewMode === 'source',
+        highlightActiveLineGutter: viewMode === 'source' && showLineNumbers,
         foldGutter: false,
         autocompletion: false,
         searchKeymap: true,

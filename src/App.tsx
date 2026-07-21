@@ -7,6 +7,8 @@ import Outline from './components/Outline'
 import RecentMenu from './components/RecentMenu'
 import TabBar from './components/TabBar'
 import Toast, { showToast } from './components/Toast'
+import SettingsDialog from './components/SettingsDialog'
+import { loadSettings, saveSettings, DEFAULT_SETTINGS, type Settings } from './lib/settings'
 import {
   isTauri,
   readFileAsText,
@@ -33,7 +35,13 @@ import {
 import { loadPersistedTabs, savePersistedTabs } from './lib/tabsStorage'
 import welcomeSrc from './samples/welcome.md?raw'
 
-const FONT_KEY = 'md-viewer-fontsize'
+/** 字体族设置 → CSS font-family 值 */
+const FONT_FAMILY_MAP: Record<string, string> = {
+  system: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+  sans: '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
+  serif: 'Georgia, "Songti SC", "SimSun", serif',
+  mono: '"JetBrains Mono", "Cascadia Code", Consolas, "Microsoft YaHei", monospace',
+}
 
 export default function App() {
   // === 多 tab 状态（reducer 集中管理）===
@@ -44,9 +52,26 @@ export default function App() {
 
   // === 全局 UI 态（视图偏好，所有 tab 共享）===
   const [outlineOpen, setOutlineOpen] = useState(true)
-  const [fontSize, setFontSize] = useState<number>(() => Number(localStorage.getItem(FONT_KEY)) || 15)
   const [recentKey, setRecentKey] = useState(0)
-  const { theme, setTheme } = useTheme()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+  // 启动时异步加载设置（覆盖默认值）
+  useEffect(() => {
+    void loadSettings().then(setSettings)
+  }, [])
+  // settings 变化时 debounce 保存 + 应用主题
+  useEffect(() => {
+    const t = setTimeout(() => void saveSettings(settings), 500)
+    return () => clearTimeout(t)
+  }, [settings])
+
+  // useTheme 改为受控：由 settings.basic.theme 驱动
+  const { setTheme } = useTheme()
+  useEffect(() => {
+    setTheme(settings.basic.theme)
+  }, [settings.basic.theme, setTheme])
 
   // === 临时态 ===
   const [confirmAction, setConfirmAction] = useState<
@@ -136,6 +161,17 @@ export default function App() {
               // 文件可能已被删除/移动，跳过这个 tab
               continue
             }
+          }
+          // welcome 升级检测：未落盘的「欢迎.md」如果内容与当前版本 welcome 不同，
+          // 说明是旧版本残留，用新版 welcome 覆盖（避免老 welcome 永远卡住）
+          if (
+            p.filePath === null &&
+            !p.dirty &&
+            p.fileName === '欢迎.md' &&
+            source !== undefined &&
+            source !== welcomeSrc
+          ) {
+            source = welcomeSrc
           }
           rebuilt.push({
             id: cryptoRandomId(),
@@ -346,9 +382,23 @@ export default function App() {
   }, [])
 
   const handleFontSize = useCallback((size: number) => {
-    const clamped = Math.min(24, Math.max(11, size))
-    setFontSize(clamped)
-    localStorage.setItem(FONT_KEY, String(clamped))
+    setSettings((s) => ({ ...s, basic: { ...s.basic, fontSize: Math.min(24, Math.max(11, size)) } }))
+  }, [])
+
+  const handleThemeCycle = useCallback(() => {
+    // 主题循环按钮：auto → light → dark → auto（Toolbar 用）
+    setSettings((s) => ({
+      ...s,
+      basic: {
+        ...s.basic,
+        theme: s.basic.theme === 'auto' ? 'light' : s.basic.theme === 'light' ? 'dark' : 'auto',
+      },
+    }))
+  }, [])
+
+  const handleResetSettings = useCallback(() => {
+    setSettings(structuredClone(DEFAULT_SETTINGS))
+    showToast('已恢复默认设置', 'success')
   }, [])
 
   const handleJump = useCallback(
@@ -418,7 +468,13 @@ export default function App() {
         }
       }}
     >
-      <div className="app">
+      <div
+        className="app"
+        style={{
+          // 字体族映射到 CSS 变量
+          '--font-sans': FONT_FAMILY_MAP[settings.basic.fontFamily],
+        } as React.CSSProperties}
+      >
         <TabBar
           tabs={tabs.tabs}
           activeId={tabs.activeTabId}
@@ -432,9 +488,9 @@ export default function App() {
           charCount={charCount}
           lineCount={lineCount}
           viewMode={activeTab?.viewMode ?? 'live'}
-          theme={theme}
+          theme={settings.basic.theme}
           outlineOpen={outlineOpen}
-          fontSize={fontSize}
+          fontSize={settings.basic.fontSize}
           isTauri={isTauri()}
           onOpenFile={handleOpenFile}
           onToolbarOpen={handleToolbarOpen}
@@ -443,9 +499,10 @@ export default function App() {
           onViewModeChange={(mode) => {
             if (activeId) dispatch({ type: 'SET_VIEW_MODE', id: activeId, mode })
           }}
-          onThemeChange={setTheme}
+          onThemeChange={handleThemeCycle}
           onToggleOutline={() => setOutlineOpen((v) => !v)}
           onFontSizeChange={handleFontSize}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
         <main className="content">
           {outlineOpen && activeTab?.viewMode !== 'preview' && (
@@ -470,7 +527,7 @@ export default function App() {
                 >
                   {tab.viewMode === 'preview' ? (
                     <div className="preview-scroll">
-                      <div className="content-inner" style={{ fontSize: fontSize + 1 }}>
+                      <div className="content-inner" style={{ fontSize: settings.basic.fontSize + 1 }}>
                         <MarkdownView source={tab.source} />
                       </div>
                     </div>
@@ -486,7 +543,10 @@ export default function App() {
                       onSave={() => handleSave(tab.id)}
                       onSaveAll={handleSaveAll}
                       viewMode={tab.viewMode}
-                      fontSize={fontSize}
+                      fontSize={settings.basic.fontSize}
+                      spellcheck={settings.editor.spellcheck}
+                      showLineNumbers={settings.editor.showLineNumbers}
+                      lineWrapping={settings.editor.lineWrapping}
                       onCursorLine={handleCursorLine(tab.id)}
                     />
                   )}
@@ -512,6 +572,14 @@ export default function App() {
           onCancel={() => setConfirmAction(null)}
           onSave={confirmSaveAndCloseTab}
           onDiscard={confirmDiscardAndCloseTab}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsDialog
+          settings={settings}
+          onChange={setSettings}
+          onClose={() => setSettingsOpen(false)}
+          onReset={handleResetSettings}
         />
       )}
     </DropZone>

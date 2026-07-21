@@ -111,6 +111,27 @@ fn save_tabs(app: tauri::AppHandle, json: String) -> Result<(), String> {
     write_atomic_path(&path, json.as_bytes()).map_err(|e| format!("保存 tab 状态失败: {}", e))
 }
 
+/// 加载应用设置（{app_data_dir}/settings.json）。
+#[tauri::command]
+fn load_settings(app: tauri::AppHandle) -> Result<String, String> {
+    let path = settings_file_path(&app)?;
+    match fs::read_to_string(&path) {
+        Ok(content) => Ok(content),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok("{}".to_string()),
+        Err(e) => Err(format!("读取设置失败: {}", e)),
+    }
+}
+
+/// 保存应用设置（原子写）。
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, json: String) -> Result<(), String> {
+    let path = settings_file_path(&app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("创建配置目录失败: {}", e))?;
+    }
+    write_atomic_path(&path, json.as_bytes()).map_err(|e| format!("保存设置失败: {}", e))
+}
+
 /// 拿 tab 状态文件路径：{app_data_dir}/tabs.json
 fn tabs_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = app
@@ -118,6 +139,15 @@ fn tabs_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         .app_data_dir()
         .map_err(|e| format!("获取应用数据目录失败: {}", e))?;
     Ok(dir.join("tabs.json"))
+}
+
+/// 拿设置文件路径：{app_data_dir}/settings.json
+fn settings_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("获取应用数据目录失败: {}", e))?;
+    Ok(dir.join("settings.json"))
 }
 
 /// 按 PathBuf 原子写入（内部用，load_tabs/save_tabs 复用）。
@@ -290,6 +320,8 @@ pub fn run() {
             take_startup_file,
             load_tabs,
             save_tabs,
+            load_settings,
+            save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

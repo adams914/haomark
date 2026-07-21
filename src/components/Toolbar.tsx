@@ -20,6 +20,7 @@ interface Props {
   onThemeChange: (t: Theme) => void
   onToggleOutline: () => void
   onFontSizeChange: (size: number) => void
+  onOpenSettings: () => void
 }
 
 export default function Toolbar({
@@ -40,6 +41,7 @@ export default function Toolbar({
   onThemeChange,
   onToggleOutline,
   onFontSizeChange,
+  onOpenSettings,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -127,6 +129,14 @@ export default function Toolbar({
         )}
         <button className="btn" onClick={handleOpenClick} title="打开文件">
           打开
+        </button>
+        <button
+          className="icon-btn"
+          onClick={onOpenSettings}
+          title="设置"
+          aria-label="设置"
+        >
+          ⚙
         </button>
         <input
           ref={inputRef}
