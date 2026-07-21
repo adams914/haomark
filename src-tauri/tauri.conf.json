@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "好记",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "identifier": "com.haomark.app",
   "mainBinaryName": "haoji",
   "build": {
