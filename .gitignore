@@ -9,8 +9,9 @@ dist-ssr
 
 # Tauri / Rust
 src-tauri/target
-src-tauri/Cargo.lock
 src-tauri/gen
+# 注意：Cargo.lock 必须提交。这是应用 crate（bin + cdylib），
+# 按 Cargo 官方规范必须纳入版本控制，保证构建可复现、依赖可审计。
 
 # Vite
 .vite
@@ -27,3 +28,9 @@ Thumbs.db
 *.log
 *.tsbuildinfo
 公众号文章.md
+
+# ZCode agent 工作目录
+.zcode/
+
+# 本地测试文档（不入版本控制）
+图片渲染测试.md

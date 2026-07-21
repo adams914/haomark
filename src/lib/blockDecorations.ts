@@ -5,6 +5,7 @@ import {
   type DecorationSet,
   WidgetType,
 } from '@codemirror/view'
+import { syntaxTree } from '@codemirror/language'
 import hljs from 'highlight.js'
 import katex from 'katex'
 import mermaid from 'mermaid'
@@ -22,7 +23,7 @@ import { md } from './renderer'
  * 约束：跨行/block 级 widget 必须用 StateField（CM6 禁止 ViewPlugin 提供）。
  */
 
-mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' })
 
 // --- 块识别 -------------------------------------------------------------
 export interface BlockRange {
@@ -33,76 +34,69 @@ export interface BlockRange {
   lang?: string
 }
 
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-/** 扫描整个文档，找出所有块级区域 */
+/**
+ * 扫描整个文档，找出所有块级区域。
+ *
+ * v2.0 改造：代码块/表格从 CodeMirror markdown 语法树派生
+ * （比手写正则更准——正确处理缩进代码块、info string 空格、表格列数等）。
+ * 数学公式块仍用手写正则（lang-markdown 默认不解析 $$）。
+ */
 export function findBlocks(state: EditorState): BlockRange[] {
   const blocks: BlockRange[] = []
+  const doc = state.doc
+
+  // 1. 从语法树拿 FencedCode + Table
+  syntaxTree(state).iterate({
+    enter(node) {
+      if (node.name === 'FencedCode') {
+        // CodeInfo 子节点 = 语言标识（info string 第一个 token）
+        const langNode = node.node.getChild('CodeInfo')
+        const lang = langNode ? doc.sliceString(langNode.from, langNode.to).trim() : ''
+        blocks.push({
+          from: node.from,
+          to: node.to,
+          type: lang.toLowerCase() === 'mermaid' ? 'mermaid' : 'code',
+          content: doc.sliceString(node.from, node.to),
+          lang,
+        })
+        return false // 不遍历代码块内部
+      }
+      if (node.name === 'Table') {
+        blocks.push({
+          from: node.from,
+          to: node.to,
+          type: 'table',
+          content: doc.sliceString(node.from, node.to),
+        })
+        return false
+      }
+      return
+    },
+  })
+
+  // 2. 数学公式块 $$ ... $$（lang-markdown 不解析，手写正则）
+  pushMathBlocks(state, blocks)
+
+  return blocks
+}
+
+/** 扫描 $$...$$ 公式块，追加到 blocks。 */
+function pushMathBlocks(state: EditorState, blocks: BlockRange[]): void {
   const doc = state.doc
   const lineCount = doc.lines
   let i = 1
   while (i <= lineCount) {
     const line = doc.line(i)
     const text = line.text
-
-    // 代码围栏 ```lang 或 ~~~lang
-    const fence = text.match(/^\s*(`{3,}|~{3,})\s*(\S*)/)
-    if (fence) {
-      const marker = fence[1][0]
-      const markerLen = fence[1].length
-      const lang = fence[2] || ''
-      let end = i + 1
-      while (end <= lineCount) {
-        if (new RegExp(`^\\s*${escapeRegex(marker)}{${markerLen},}\\s*$`).test(doc.line(end).text)) break
-        end++
-      }
-      const endLine = doc.line(Math.min(end, lineCount))
-      blocks.push({
-        from: line.from,
-        to: endLine.to,
-        type: lang.toLowerCase() === 'mermaid' ? 'mermaid' : 'code',
-        content: doc.sliceString(line.from, endLine.to),
-        lang,
-      })
-      i = end + 1
-      continue
-    }
-
-    // 表格：| 开头 + 下一行是分隔行
-    if (/^\s*\|/.test(text) && i + 1 <= lineCount) {
-      const next = doc.line(i + 1).text
-      if (/^\s*\|?[\s:|-]+\|?\s*$/.test(next) && next.includes('-')) {
-        let end = i
-        while (end + 1 <= lineCount && /^\s*\|/.test(doc.line(end + 1).text)) end++
-        const endLine = doc.line(end)
-        blocks.push({
-          from: line.from,
-          to: endLine.to,
-          type: 'table',
-          content: doc.sliceString(line.from, endLine.to),
-        })
-        i = end + 1
-        continue
-      }
-    }
-
-    // 公式块 $$ ... $$
     if (/^\s*\$\$/.test(text)) {
       // 单行 $$...$$（同一行内有开始和结束）
       const single = text.match(/^\s*\$\$(.+)\$\$\s*$/)
       if (single) {
-        blocks.push({
-          from: line.from,
-          to: line.to,
-          type: 'math',
-          content: single[1],
-        })
+        blocks.push({ from: line.from, to: line.to, type: 'math', content: single[1] })
         i++
         continue
       }
@@ -111,19 +105,12 @@ export function findBlocks(state: EditorState): BlockRange[] {
       while (end <= lineCount && !doc.line(end).text.includes('$$')) end++
       const endLine = doc.line(Math.min(end, lineCount))
       const inner = doc.sliceString(line.to + 1, endLine.from)
-      blocks.push({
-        from: line.from,
-        to: endLine.to,
-        type: 'math',
-        content: inner,
-      })
+      blocks.push({ from: line.from, to: endLine.to, type: 'math', content: inner })
       i = end + 1
       continue
     }
-
     i++
   }
-  return blocks
 }
 
 function isCursorInBlock(state: EditorState, from: number, to: number): boolean {
@@ -141,6 +128,19 @@ abstract class EditableBlockWidget extends WidgetType {
   /** 子类渲染内容到 wrap；基类统一接管点击 */
   protected abstract renderContent(): HTMLElement
   protected baseClass = 'md-block'
+  /** 子类内容相等性（不含位置）。基类 eq() 在此基础上加位置比较。 */
+  protected abstract contentEq(other: this): boolean
+
+  eq(other: object): boolean {
+    if (!(other instanceof EditableBlockWidget)) return false
+    // 位置必须相同——否则内容相同的不同块会复用 widget，
+    // 导致点击定位错乱（mousedown 监听器闭包持旧 blockFrom）。
+    return (
+      other.blockFrom === this.blockFrom &&
+      other.blockTo === this.blockTo &&
+      this.contentEq(other as this)
+    )
+  }
 
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('div')
@@ -148,6 +148,9 @@ abstract class EditableBlockWidget extends WidgetType {
     wrap.appendChild(this.renderContent())
     // 关键：点击 → dispatch 光标到块首下一字符（落在块范围内）
     wrap.addEventListener('mousedown', (e) => {
+      // 只拦截主键（左键），允许右键菜单和中键。
+      // 同时允许用户在 widget 内部选中文本（如代码块）。
+      if (e.button !== 0) return
       e.preventDefault()
       e.stopPropagation()
       view.focus()
@@ -168,7 +171,7 @@ class CodeBlockWidget extends EditableBlockWidget {
     super(from, to)
     this.baseClass = 'md-block md-code-block'
   }
-  eq(o: CodeBlockWidget) {
+  protected contentEq(o: this): boolean {
     return o.code === this.code && o.lang === this.lang
   }
   protected renderContent(): HTMLElement {
@@ -199,7 +202,7 @@ class TableWidget extends EditableBlockWidget {
     super(from, to)
     this.baseClass = 'md-block md-table-block'
   }
-  eq(o: TableWidget) {
+  protected contentEq(o: this): boolean {
     return o.mdSrc === this.mdSrc
   }
   protected renderContent(): HTMLElement {
@@ -245,7 +248,7 @@ class MathBlockWidget extends EditableBlockWidget {
     super(from, to)
     this.baseClass = 'md-block md-math-block'
   }
-  eq(o: MathBlockWidget) {
+  protected contentEq(o: this): boolean {
     return o.tex === this.tex
   }
   protected renderContent(): HTMLElement {
@@ -272,7 +275,9 @@ class MermaidBlockWidget extends EditableBlockWidget {
     // 每次渲染用唯一 id，避免光标进出块多次渲染时的 id 冲突
     this.id = `md-mermaid-${Math.random().toString(36).slice(2, 10)}`
   }
-  eq(o: MermaidBlockWidget) {
+  protected contentEq(o: this): boolean {
+    // 注意：Mermaid 的 id 是随机生成的，不参与相等性比较。
+    // 位置比较由基类 eq 负责。
     return o.code === this.code
   }
   protected renderContent(): HTMLElement {

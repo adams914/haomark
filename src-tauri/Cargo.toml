@@ -17,6 +17,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
 
+# release 优化：减小体积（LTO + 单 codegen unit + 剥符号）
+# 副作用：编译变慢，但二进制约可减 30-50%
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -25,3 +33,7 @@ tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+# v1.1：单实例锁 + 窗口状态记忆 + 编码探测
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+encoding_rs = "0.8"

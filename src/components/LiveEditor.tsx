@@ -6,18 +6,27 @@ import { EditorView, highlightActiveLine, lineNumbers, ViewPlugin } from '@codem
 import { Prec, EditorSelection, type Extension } from '@codemirror/state'
 import { livePreviewPlugin } from '../lib/liveDecorations'
 import { blockField, blockAtomicRanges } from '../lib/blockDecorations'
+import type { ViewMode } from '../lib/tabs'
 
-export type ViewMode = 'live' | 'source' | 'preview'
+// re-export 保持下游 import { ViewMode } from './LiveEditor' 兼容
+export type { ViewMode }
 
 export interface LiveEditorHandle {
   /** 跳转到指定行（1 基）并滚动入视图 */
   scrollToLine: (line: number) => void
+  /**
+   * 强制 CodeMirror 重新测量 DOM。
+   * 用于 tab 从 display:none 切回 visible 时——CM6 在隐藏态下无法测量尺寸，
+   * 切回后需要主动触发，否则行高/换行会错乱。
+   */
+  refresh: () => void
 }
 
 interface Props {
   value: string
   onChange: (value: string) => void
   onSave?: () => void
+  onSaveAll?: () => void
   viewMode: ViewMode
   /** 编辑器字号 */
   fontSize?: number
@@ -57,12 +66,12 @@ function wrapSelection(view: EditorView, before: string, after: string = before)
 }
 
 const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
-  { value, onChange, onSave, viewMode, fontSize = 15, onCursorLine },
+  { value, onChange, onSave, onSaveAll, viewMode, fontSize = 15, onCursorLine },
   ref,
 ) {
   const viewRef = useRef<EditorView | null>(null)
 
-  // 暴露跳转方法给父组件
+  // 暴露跳转 + refresh 方法给父组件
   useImperativeHandle(ref, () => ({
     scrollToLine(line: number) {
       const view = viewRef.current
@@ -73,6 +82,12 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
         effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' }),
       })
       view.focus()
+    },
+    refresh() {
+      const view = viewRef.current
+      if (!view) return
+      // 空事务触发重新测量；requestMeasure 保证 CM6 重排
+      view.requestMeasure()
     },
   }))
 
@@ -89,7 +104,12 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
             const key = e.key.toLowerCase()
             if (key === 's') {
               e.preventDefault()
-              onSave?.()
+              // Ctrl+Alt+S = 保存全部，Ctrl+S = 保存当前
+              if (e.altKey) {
+                onSaveAll?.()
+              } else {
+                onSave?.()
+              }
               return true
             }
             if (viewMode === 'preview') return false
@@ -109,7 +129,7 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
           },
         }),
       ),
-    [onSave, viewMode],
+    [onSave, onSaveAll, viewMode],
   )
 
   // 光标行变化 → 通知父组件（大纲高亮）

@@ -15,6 +15,7 @@ interface Props {
   onOpenFile: (file: File) => void
   onToolbarOpen?: () => void
   onSave: () => void
+  onSaveAll?: () => void
   onViewModeChange: (mode: ViewMode) => void
   onThemeChange: (t: Theme) => void
   onToggleOutline: () => void
@@ -34,6 +35,7 @@ export default function Toolbar({
   onOpenFile,
   onToolbarOpen,
   onSave,
+  onSaveAll,
   onViewModeChange,
   onThemeChange,
   onToggleOutline,
@@ -113,6 +115,16 @@ export default function Toolbar({
         <button className="btn btn-primary" onClick={onSave} disabled={!dirty} title="保存（Ctrl+S）">
           保存
         </button>
+        {onSaveAll && (
+          <button
+            className="icon-btn"
+            onClick={onSaveAll}
+            title="保存全部（Ctrl+Alt+S）"
+            aria-label="保存全部"
+          >
+            ⇩⇩
+          </button>
+        )}
         <button className="btn" onClick={handleOpenClick} title="打开文件">
           打开
         </button>

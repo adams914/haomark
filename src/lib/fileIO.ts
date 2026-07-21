@@ -79,6 +79,15 @@ export async function tauriTakeStartupFile(): Promise<OpenResult | null> {
   return { path, name, content }
 }
 
+/** Tauri：按路径直接加载文件（用于单实例转发的 open-file 事件）。*/
+export async function tauriLoadFilePath(path: string): Promise<OpenResult | null> {
+  if (!isTauri()) return null
+  const { invoke } = await import('@tauri-apps/api/core')
+  const content = await invoke<string>('read_file', { path })
+  const name = path.split(/[\\/]/).pop() ?? 'untitled.md'
+  return { path, name, content }
+}
+
 /** Tauri：写回原文件。有 path 就直接写，否则弹另存为对话框。返回最终路径。 */
 export async function tauriSaveFile(
   content: string,
