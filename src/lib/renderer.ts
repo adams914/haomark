@@ -2,6 +2,10 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import katex from 'katex'
 
+// markdown-it 的 Token 类型没暴露干净的子路径，用宽松类型避免类型错误阻塞构建
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Token = any
+
 /**
  * 渲染核心：markdown-it 实例 + 代码高亮 + KaTeX 公式 + Mermaid 占位。
  *
@@ -46,30 +50,87 @@ function escapeAttr(s: string): string {
  * 在 markdown-it 解析"之前"先抽走 KaTeX，替换为占位 token，
  * 等 markdown-it 生成 HTML 后再把占位还原成 KaTeX 输出。
  * 这样公式内容不会被 markdown 当成普通文本二次处理（比如 _ 下标）。
+ *
+ * v2.0 修复（关键 bug）：之前对整篇源码跑正则，会破坏代码块/行内代码内的 $...$。
+ * 现在先抽走所有代码区域（围栏代码块 + 行内代码），用占位符替换，
+ * KaTeX 只处理非代码区域，最后再还原代码。
+ *
+ * 占位符方案：用 PUA（私用区）字符 U+E000~U+F8FF 的 surrogate pair。
+ * 这些字符在 markdown 文档中几乎不会出现，且不会被 markdown-it normalize 改变。
  */
 function applyKatex(src: string): { protected: string; slots: string[] } {
   const slots: string[] = []
-  // 注意：不能用 NUL(\u0000)——markdown-it 的 normalize 会把 NUL 替换成
-  // U+FFFD（CommonMark 规范要求），导致还原正则失效、占位符泄漏成裸文本。
-  // 用纯 ASCII 安全 token，@ 在 markdown 中无特殊含义。
-  const PH = (i: number) => `@@KATEX${i}@@`
+  const codeSlots: string[] = []
 
-  let out = src.replace(KATEX_BLOCK_RE, (_, tex: string) => {
+  // 第 1 步：抽走代码区域（防止 KaTeX 正则破坏代码内容）
+  // - 围栏代码块：```...``` 或 ~~~...~~~
+  // - 行内代码：`...`（含多反引号 ``...``）
+  let work = protectCodeRegions(src, codeSlots)
+
+  // 第 2 步：处理 KaTeX（在非代码区域）
+  // 占位符用 PUA 字符：U+E000（\uE000）开始，单字符（BMP 内，不需 surrogate pair）
+  const PH = (i: number) => `\uE000${i}\uE001`
+
+  work = work.replace(KATEX_BLOCK_RE, (_, tex: string) => {
     const html = renderKatex(tex.trim(), true)
     slots.push(html)
     return PH(slots.length - 1)
   })
-  out = out.replace(KATEX_INLINE_RE, (_, tex: string) => {
+  work = work.replace(KATEX_INLINE_RE, (_, tex: string) => {
     const html = renderKatex(tex, false)
     slots.push(html)
     return PH(slots.length - 1)
   })
 
-  return { protected: out, slots }
+  // 第 3 步：还原代码区域（KaTeX 处理完毕后）
+  work = restoreCodeRegions(work, codeSlots)
+
+  return { protected: work, slots }
 }
 
+/** 占位符正则：匹配 \uE000数字\uE001 */
+const PH_RE = /\uE000(\d+)\uE001/g
+
 function restoreKatex(html: string, slots: string[]): string {
-  return html.replace(/@@KATEX(\d+)@@/g, (_, i: string) => slots[Number(i)] ?? '')
+  return html.replace(PH_RE, (_, i: string) => slots[Number(i)] ?? '')
+}
+
+/**
+ * 抽走代码区域，用占位符替换。
+ * 占位符用 PUA 字符 U+E002 + 索引 + U+E003，与 KaTeX 占位符区分。
+ * 返回替换后的文本；codeSlots 按索引存原始代码内容。
+ */
+function protectCodeRegions(src: string, codeSlots: string[]): string {
+  const CODE_PH = (i: number) => `\uE002${i}\uE003`
+  let out = src
+
+  // 1. 围栏代码块 ```...``` 或 ~~~...~~~（跨行，非贪婪）
+  // 必须先处理围栏（块级），再处理行内
+  const fenceRe = /(^|\n)(`{3,}|~{3,})[^\n]*\n([\s\S]*?)\2[ \t]*(?=\n|$)/g
+  out = out.replace(fenceRe, (full, prefix) => {
+    codeSlots.push(full)
+    return `${prefix}${CODE_PH(codeSlots.length - 1)}`
+  })
+
+  // 2. 行内代码：双反引号 ``...`` 或单反引号 `...`
+  // 先处理双反引号（更长的先匹配），再处理单反引号
+  const inlineDoubleRe = /``([^`]+)``/g
+  out = out.replace(inlineDoubleRe, (full) => {
+    codeSlots.push(full)
+    return CODE_PH(codeSlots.length - 1)
+  })
+  const inlineSingleRe = /`([^`\n]+)`/g
+  out = out.replace(inlineSingleRe, (full) => {
+    codeSlots.push(full)
+    return CODE_PH(codeSlots.length - 1)
+  })
+
+  return out
+}
+
+/** 还原代码区域占位符。 */
+function restoreCodeRegions(text: string, codeSlots: string[]): string {
+  return text.replace(/\uE002(\d+)\uE003/g, (_, i: string) => codeSlots[Number(i)] ?? '')
 }
 
 // --- markdown-it 实例 ---------------------------------------------------
@@ -130,31 +191,79 @@ md.inline.ruler.after('emphasis', 'strikethrough', (state, silent) => {
 })
 
 // 任务列表：把 [ ] / [x] 开头的列表项标记成任务 -------------------------
+// v2.0 修复：之前遍历所有 inline token，会把普通段落（如 "[ ] 待办" 独立成段）
+// 也变成任务项。现在用状态机跟踪 list_item 上下文，只处理 list_item 内的 inline。
 md.core.ruler.after('normalize', 'task_lists', (state) => {
-  state.tokens.forEach((tok) => {
-    if (tok.type !== 'inline' || !tok.children) return
-    for (let i = 0; i < tok.children.length - 1; i++) {
+  // 用栈跟踪 list_item 嵌套（支持任务列表嵌套在普通列表里）
+  const listItemStack: Array<{ bullet: boolean; firstInlineDone: boolean }> = []
+  for (let idx = 0; idx < state.tokens.length; idx++) {
+    const tok = state.tokens[idx]
+    if (tok.type === 'bullet_list_open') {
+      listItemStack.push({ bullet: true, firstInlineDone: false })
+      continue
+    }
+    if (tok.type === 'ordered_list_open') {
+      listItemStack.push({ bullet: false, firstInlineDone: false })
+      continue
+    }
+    if (tok.type === 'bullet_list_close' || tok.type === 'ordered_list_close') {
+      listItemStack.pop()
+      continue
+    }
+    if (tok.type === 'list_item_open') {
+      // 标记当前 list_item 的第一个 inline 还没处理
+      // 用 tok 的隐藏字段记录（不污染序列化，markdown-it 内部用）
+      ;(tok as unknown as { _firstInlineDone?: boolean })._firstInlineDone = false
+      continue
+    }
+    if (tok.type !== 'inline' || !tok.children) continue
+
+    // 检查是否在 list_item 内（通过找前面最近的未关闭 list_item_open）
+    const inListItem = isInListItem(state.tokens, idx)
+    if (!inListItem) continue
+
+    // 只处理每个 list_item 的第一个 inline
+    const listItemTok = findEnclosingListItem(state.tokens, idx)
+    if (!listItemTok) continue
+    const flag = listItemTok as unknown as { _firstInlineDone?: boolean }
+    if (flag._firstInlineDone) continue
+    flag._firstInlineDone = true
+
+    // 找第一个 text child，匹配 [ ] / [x]
+    for (let i = 0; i < tok.children.length; i++) {
       const c0 = tok.children[i]
       if (c0.type !== 'text') continue
       const m = c0.content.match(/^\[([ xX])\]\s+/)
-      if (!m) continue
+      if (!m) break // 第一个 text 不匹配就放弃（GFM 要求 task marker 在最前面）
       const checked = m[1].toLowerCase() === 'x'
-
-      // 在父级（list_item）上打标记，供 CSS 处理圆点
-      // 并把当前 text token 改成 checkbox + 剩余文本
       c0.content = c0.content.slice(m[0].length)
-      // 注入 checkbox HTML：用一个 html_inline token
       const checkbox = new state.Token('html_inline', '', 0)
       checkbox.content =
         `<input type="checkbox" class="task-checkbox" ${checked ? 'checked disabled' : 'disabled'} /> `
       tok.children.splice(i, 0, checkbox)
-      // 给所在 list_item 打 class
-      // （markdown-it 的 list_item_open 在 inline 之前；通过 env 标记较复杂，
-      //  这里用更简单的方式：靠 CSS 选择器 .task-checkbox 的父 li）
-      i++ // 跳过刚插入的 checkbox
+      break
     }
-  })
+  }
 })
+
+/** 判断位置 idx 的 token 是否在 list_item 内。 */
+function isInListItem(tokens: Token[], idx: number): boolean {
+  return findEnclosingListItem(tokens, idx) !== null
+}
+
+/** 找位置 idx 之前最近的未闭合 list_item_open token。 */
+function findEnclosingListItem(tokens: Token[], idx: number): Token | null {
+  let depth = 0
+  for (let i = idx - 1; i >= 0; i--) {
+    const t = tokens[i]
+    if (t.type === 'list_item_close') depth++
+    else if (t.type === 'list_item_open') {
+      if (depth === 0) return t
+      depth--
+    }
+  }
+  return null
+}
 
 // --- 源行映射：给块级元素注入 data-source-line --------------------------
 // markdown-it 的 block token 自带 map: [startLine, endLine]（0 基）。

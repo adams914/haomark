@@ -2,10 +2,13 @@ import { useEffect, useRef } from 'react'
 import mermaid from 'mermaid'
 import { renderMarkdown } from '../lib/renderer'
 
+// securityLevel: 'strict' 拒绝在 mermaid 标签里执行任意 HTML/JS。
+// 之前用 'loose' 是 XSS 入口——用户打开来路不明的 .md 时，mermaid 标签里
+// 的 <img onerror=...> 会执行，在 Tauri 上下文里能访问文件系统。
 mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
-  securityLevel: 'loose',
+  securityLevel: 'strict',
   // 中文字体回退
   flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
 })
@@ -35,11 +38,14 @@ export default function MarkdownView({ source }: Props) {
 
     mermaidBlocks.forEach((block, idx) => {
       const raw = block.getAttribute('data-raw') ?? ''
-      // mermaid 期望文本直接放在元素里
+      // 安全要点：用 textContent 而非 innerHTML。
+      // data-raw 经 escapeAttr 存储，浏览器 getAttribute 已自动解码回原始文本。
+      // 设 textContent 保证 mermaid 源码作为纯文本注入，不会触发 HTML 解析。
       block.removeAttribute('data-raw')
-      block.innerHTML = escapeForMermaid(raw)
+      block.textContent = raw
       // mermaid.run 按 class .mermaid + 无 data-processed 识别
       void block.setAttribute('data-idx', String(idx))
+      void idx
     })
 
     let cancelled = false
@@ -63,14 +69,4 @@ export default function MarkdownView({ source }: Props) {
   }, [source])
 
   return <div ref={ref} className="markdown-body" />
-}
-
-/** Mermaid 内容里我们用 data-raw 已转义存储，这里反转义回原始文本。 */
-function escapeForMermaid(raw: string): string {
-  // data-raw 经过 escapeAttr 存储：&amp; &lt; &gt; &quot;
-  return raw
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
 }

@@ -15,10 +15,12 @@ interface Props {
   onOpenFile: (file: File) => void
   onToolbarOpen?: () => void
   onSave: () => void
+  onSaveAll?: () => void
   onViewModeChange: (mode: ViewMode) => void
   onThemeChange: (t: Theme) => void
   onToggleOutline: () => void
   onFontSizeChange: (size: number) => void
+  onOpenSettings: () => void
 }
 
 export default function Toolbar({
@@ -34,10 +36,12 @@ export default function Toolbar({
   onOpenFile,
   onToolbarOpen,
   onSave,
+  onSaveAll,
   onViewModeChange,
   onThemeChange,
   onToggleOutline,
   onFontSizeChange,
+  onOpenSettings,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -113,8 +117,26 @@ export default function Toolbar({
         <button className="btn btn-primary" onClick={onSave} disabled={!dirty} title="保存（Ctrl+S）">
           保存
         </button>
+        {onSaveAll && (
+          <button
+            className="icon-btn"
+            onClick={onSaveAll}
+            title="保存全部（Ctrl+Alt+S）"
+            aria-label="保存全部"
+          >
+            ⇩⇩
+          </button>
+        )}
         <button className="btn" onClick={handleOpenClick} title="打开文件">
           打开
+        </button>
+        <button
+          className="icon-btn"
+          onClick={onOpenSettings}
+          title="设置"
+          aria-label="设置"
+        >
+          ⚙
         </button>
         <input
           ref={inputRef}

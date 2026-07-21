@@ -4,6 +4,118 @@
   height: 100vh;
 }
 
+/* === 标签栏（v2.0）=== */
+.tabbar {
+  display: flex;
+  align-items: stretch;
+  height: 34px;
+  background: var(--bg-toolbar, #f6f8fa);
+  border-bottom: 1px solid var(--border, #d1d9e0);
+  user-select: none;
+  flex-shrink: 0;
+}
+.tabbar-list {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  /* 隐藏滚动条（用滚轮横向滚）*/
+  scrollbar-width: thin;
+}
+.tabbar-list::-webkit-scrollbar {
+  height: 4px;
+}
+.tabbar-list::-webkit-scrollbar-thumb {
+  background: var(--border, #d1d9e0);
+  border-radius: 2px;
+}
+.tabbar-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  min-width: 100px;
+  max-width: 200px;
+  cursor: pointer;
+  border-right: 1px solid var(--border, #d1d9e0);
+  color: var(--text-muted, #59636e);
+  font-size: 13px;
+  position: relative;
+  transition: background 0.12s;
+}
+.tabbar-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.tabbar-item.active {
+  background: var(--bg, #fff);
+  color: var(--text, #1f2328);
+}
+.tabbar-item.active::after {
+  /* active 标记：底部一条蓝色线 */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent, #0969da);
+}
+.tabbar-dirty {
+  color: var(--accent, #0969da);
+  font-size: 10px;
+  line-height: 1;
+  visibility: hidden;
+}
+.tabbar-dirty.dirty {
+  visibility: visible;
+}
+.tabbar-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tabbar-close {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #59636e);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+.tabbar-close.visible {
+  opacity: 0.6;
+}
+.tabbar-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  opacity: 1;
+  color: var(--text, #1f2328);
+}
+.tabbar-new {
+  width: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #59636e);
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.tabbar-new:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text, #1f2328);
+}
+
 /* 顶栏 */
 .toolbar {
   height: var(--toolbar-h);
@@ -306,6 +418,9 @@
   min-width: 0;
   height: 100%;
   overflow: hidden;
+  /* v2.0：多个 tab-pane 在这里切换，必须设 flex 才能让 tab-pane 的 flex:1 生效 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* 字号控件 */
@@ -430,4 +545,283 @@
 .drop-icon {
   font-size: 28px;
   margin-bottom: 8px;
+}
+
+/* === Toast 提示 === */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--bg-toolbar, #fff);
+  color: var(--text, #1f2328);
+  font-size: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  max-width: 480px;
+  animation: toast-in 0.2s ease-out;
+  border-left: 3px solid var(--accent, #0969da);
+}
+.toast-success { border-left-color: #1a7f37; }
+.toast-error {
+  border-left-color: #cf222e;
+  color: #cf222e;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === 未保存确认对话框 === */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+}
+.confirm-dialog {
+  width: 360px;
+  padding: 20px 24px;
+  border-radius: 10px;
+  background: var(--bg-toolbar, #fff);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+}
+.confirm-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.confirm-body {
+  font-size: 13px;
+  color: var(--text-muted, #59636e);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.confirm-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #d1d9e0);
+  background: transparent;
+  color: var(--text, #1f2328);
+  font-size: 13px;
+  cursor: pointer;
+}
+.confirm-btn:hover { background: var(--code-bg, rgba(0,0,0,0.04)); }
+.confirm-btn-primary {
+  background: var(--accent, #0969da);
+  color: #fff;
+  border-color: var(--accent, #0969da);
+}
+.confirm-btn-primary:hover { background: var(--accent, #0969da); opacity: 0.9; }
+.confirm-btn-danger {
+  background: #cf222e;
+  color: #fff;
+  border-color: #cf222e;
+}
+.confirm-btn-danger:hover { opacity: 0.9; }
+
+/* 关窗确认对话框里的未保存文档列表 */
+.confirm-list {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--text, #1f2328);
+  max-height: 160px;
+  overflow-y: auto;
+}
+.confirm-list li {
+  padding: 2px 0;
+}
+
+/* === 设置对话框（v2.0）=== */
+.settings-dialog {
+  width: 640px;
+  max-width: 92vw;
+  height: 460px;
+  max-height: 86vh;
+  display: flex;
+  border-radius: 10px;
+  background: var(--bg-toolbar, #fff);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.settings-sidebar {
+  width: 130px;
+  background: rgba(0, 0, 0, 0.03);
+  border-right: 1px solid var(--border, #d1d9e0);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-nav {
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-muted, #59636e);
+  font-size: 13px;
+  border-left: 2px solid transparent;
+}
+.settings-nav:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text, #1f2328);
+}
+.settings-nav.active {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--accent, #0969da);
+  border-left-color: var(--accent, #0969da);
+  font-weight: 600;
+}
+.settings-nav-spacer { flex: 1; }
+.settings-reset {
+  color: var(--text-muted, #59636e);
+  font-size: 12px;
+}
+.settings-reset:hover { color: #cf222e; }
+
+.settings-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border, #d1d9e0);
+}
+.settings-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.settings-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted, #59636e);
+  border-radius: 4px;
+}
+.settings-close:hover { background: rgba(0, 0, 0, 0.06); }
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 16px;
+}
+.settings-field:last-child { border-bottom: none; }
+.settings-field-label { flex: 1; min-width: 0; }
+.settings-field-name {
+  font-size: 13px;
+  color: var(--text, #1f2328);
+}
+.settings-field-desc {
+  font-size: 11px;
+  color: var(--text-muted, #59636e);
+  margin-top: 2px;
+}
+.settings-field-control {
+  flex-shrink: 0;
+  min-width: 120px;
+  display: flex;
+  justify-content: flex-end;
+}
+.settings-field select,
+.settings-field input[type="range"] {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border, #d1d9e0);
+  border-radius: 4px;
+  background: var(--bg, #fff);
+  color: var(--text, #1f2328);
+  font-size: 12px;
+}
+.settings-data-path {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-muted, #59636e);
+  word-break: break-all;
+}
+
+/* Toggle 开关 */
+.toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--border, #d1d9e0);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle.on {
+  background: var(--accent, #0969da);
+}
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.toggle.on .toggle-knob {
+  transform: translateX(16px);
+}
+
+/* === Tab pane（多标签页编辑器容器）=== */
+.tab-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+/* CodeMirror 编辑器在 flex 容器里要撑满 */
+.tab-pane .cm-editor-wrap {
+  flex: 1;
+  min-height: 0;
+}
+.tab-pane .preview-scroll {
+  flex: 1;
+  min-height: 0;
 }
