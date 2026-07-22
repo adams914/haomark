@@ -1,54 +1,214 @@
-/* 重置 + 主题变量（先只做亮色，暗色留到阶段三） */
+/* 好记 · 设计 token 层（v2.1 Notion 风）
+ *
+ * 设计原则：
+ * - 暖灰背景层次（替代冷蓝 Primer 风）
+ * - 暖黑文字（#37352f 而非纯黑）
+ * - 淡边框（比 GitHub 的 #d0d7de 淡很多）
+ * - 阴影必带 1px 内描边（Notion 浮层边缘清晰的秘诀）
+ * - 80ms 即时 hover 反馈（快而准，不用 transform）
+ * - 圆角只用 md(6px) 和 lg(10px) 两档
+ */
+
+/* ========== 亮色主题 ========== */
 :root {
-  --bg: #ffffff;
-  --bg-toolbar: #f6f8fa;
-  --bg-hover: #eaeef2;
-  --border: #d0d7de;
-  --text: #1f2328;
-  --text-muted: #656d76;
-  --link: #0969da;
-  --code-bg: #f6f8fa;
-  --code-border: #d0d7de;
-  --accent: #0969da;
+  /* 背景层次 */
+  --bg-page: #ffffff;
+  --bg-secondary: #f7f7f5;
+  --bg-tertiary: #f0f0ee;
+  --bg-hover: #efefed;
+  --bg-active: #e9e9e7;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  /* 文字层次 */
+  --text-primary: #37352f;
+  --text-secondary: #787774;
+  --text-tertiary: #9f9e9b;
+  --text-disabled: #b9b8b5;
 
-  --content-width: 820px;
-  --toolbar-h: 48px;
+  /* 边框（比 Primer 淡） */
+  --border-default: #e3e2de;
+  --border-subtle: #eeeeec;
+
+  /* 强调蓝（Notion 蓝，比 Primer 的 #0969da 更亮） */
+  --accent-blue: #2383e2;
+  --accent-blue-hover: #0077d4;
+  --accent-blue-bg: #e6f2fb;
+  --accent-blue-selection: #cbe3f8;
+
+  /* 功能色 + 浅背景 */
+  --success: #448361;
+  --success-bg: #edf3ec;
+  --warning: #d9730d;
+  --warning-bg: #fbecdd;
+  --error: #eb5757;
+  --error-bg: #fdebec;
+  --info: #337ea9;
+  --info-bg: #e7f3f8;
+
+  /* 内容块专用色 */
+  --code-text: #eb5757;  /* Notion 特征：行内代码红字 */
+  --code-bg: #f7f6f3;
+  --code-border: #e9e9e7;
+  --quote-border: #37352f;
+  --table-header-bg: #f7f7f5;
+  --table-border: #e9e9e7;
+
+  /* 排版 */
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Helvetica,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", Consolas, "JetBrains Mono",
+    Menlo, "PingFang SC", monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+
+  --leading-tight: 1.25;
+  --leading-base: 1.6;
+  --leading-ui: 1.4;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* 间距（4px 基网） */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 20px;
+  --space-xl: 32px;
+
+  /* 圆角（只用 md 和 lg 两档） */
+  --radius-sm: 3px;    /* 仅限行内代码和小 tag */
+  --radius-md: 6px;    /* 按钮、输入框、下拉 */
+  --radius-lg: 10px;   /* 对话框、卡片 */
+  --radius-full: 9999px;
+
+  /* 阴影（必带 1px 内描边） */
+  --shadow-sm: 0 0 0 1px rgba(15, 15, 15, 0.05),
+               0 1px 2px rgba(15, 15, 15, 0.08);
+  --shadow-md: 0 0 0 1px rgba(15, 15, 15, 0.05),
+               0 3px 6px rgba(15, 15, 15, 0.10),
+               0 9px 24px rgba(15, 15, 15, 0.20);
+  --shadow-lg: 0 0 0 1px rgba(15, 15, 15, 0.04),
+               0 5px 12px rgba(15, 15, 15, 0.12),
+               0 15px 40px rgba(15, 15, 15, 0.22);
+
+  /* 微交互（80ms 即时反馈，不用 transform） */
+  --duration-fast: 80ms;
+  --duration-base: 150ms;
+  --duration-slow: 250ms;
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+
+  /* focus ring */
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px rgba(35, 131, 226, 0.4);
+
+  /* 布局尺寸 */
+  --content-width: 780px;  /* 统一编辑器和预览的栏宽（之前 760/820 不一致） */
+  --toolbar-h: 44px;       /* Notion 风更薄，之前 48px 偏 IDE */
 }
 
-/* 暗色主题：通过 data-theme="dark" 或系统 prefers-color-scheme 触发 */
+/* ========== 暗色主题（Notion 暗色是近黑暖灰 #191919，不是 VS Code 冷灰） ========== */
 [data-theme='dark'] {
-  --bg: #1e1e1e;
-  --bg-toolbar: #252526;
-  --bg-hover: #2a2d2e;
-  --border: #3c3c3c;
-  --text: #d4d4d4;
-  --text-muted: #9d9d9d;
-  --link: #569cd6;
-  --code-bg: #2d2d2d;
-  --code-border: #3c3c3c;
-  --accent: #569cd6;
+  --bg-page: #191919;
+  --bg-secondary: #202020;
+  --bg-tertiary: #252525;
+  --bg-hover: #2c2c2c;
+  --bg-active: #373737;
+
+  --text-primary: #d4d4d2;
+  --text-secondary: #9b9b9b;
+  --text-tertiary: #6f6f6f;
+  --text-disabled: #4a4a4a;
+
+  --border-default: #373737;
+  --border-subtle: #2a2a2a;
+
+  /* 暗色下蓝色提亮保证对比度 */
+  --accent-blue: #529cca;
+  --accent-blue-hover: #6db3d8;
+  --accent-blue-bg: #1c3a52;
+  --accent-blue-selection: #274a66;
+
+  --success: #529e72;
+  --success-bg: #1f2b24;
+  --warning: #e08a3c;
+  --warning-bg: #33271a;
+  --error: #eb5757;
+  --error-bg: #332121;
+  --info: #529cca;
+  --info-bg: #1c2b36;
+
+  --code-text: #eb5757;
+  --code-bg: #202020;
+  --code-border: #2f2f2f;
+  --quote-border: #d4d4d2;
+  --table-header-bg: #202020;
+  --table-border: #2f2f2f;
+
+  /* 暗色阴影：黑底投影 + 白色内描边 */
+  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.07),
+               0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.07),
+               0 4px 8px rgba(0, 0, 0, 0.35),
+               0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.06),
+               0 8px 16px rgba(0, 0, 0, 0.4),
+               0 20px 48px rgba(0, 0, 0, 0.5);
+
+  --focus-ring: 0 0 0 2px #191919, 0 0 0 4px rgba(82, 156, 202, 0.5);
 }
 
-/* 系统暗色且未显式指定亮色时，也应用暗色变量 */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #1e1e1e;
-    --bg-toolbar: #252526;
-    --bg-hover: #2a2d2e;
-    --border: #3c3c3c;
-    --text: #d4d4d4;
-    --text-muted: #9d9d9d;
-    --link: #569cd6;
-    --code-bg: #2d2d2d;
-    --code-border: #3c3c3c;
-    --accent: #569cd6;
-  }
+/* ========== 旧变量名别名映射（过渡期，后续批次逐个替换） ========== */
+:root {
+  /* 旧变量 → 新变量 */
+  --bg: var(--bg-page);
+  --bg-toolbar: var(--bg-secondary);
+  --bg-hover: var(--bg-hover);
+  --border: var(--border-default);
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --link: var(--accent-blue);
+  --code-bg: var(--code-bg);  /* 同名，无需映射 */
+  --code-border: var(--code-border);  /* 同名 */
+  --accent: var(--accent-blue);
 }
 
+/* ========== 全局补充 ========== */
+
+/* 选中样式（Notion 风浅蓝） */
+::selection {
+  background: var(--accent-blue-selection);
+}
+
+/* 统一 focus ring（用 outline，不用 box-shadow，避免和组件的阴影冲突） */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+/* 鼠标点击触发的焦点不显示 ring（只在键盘导航时显示） */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 滚动条（暗色下也要可见） */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 基础重置 */
 * {
   box-sizing: border-box;
 }
@@ -63,24 +223,14 @@ body,
 
 body {
   font-family: var(--font-sans);
-  color: var(--text);
-  background: var(--bg);
+  color: var(--text-primary);
+  background: var(--bg-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
 }
 
 button {
   font-family: inherit;
-}
-
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 6px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
 }

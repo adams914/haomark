@@ -56,7 +56,16 @@ export default function Outline({ source, currentLine, onJump }: Props) {
               data-key={key}
               className={`outline-item level-${h.level} ${isActive ? 'active' : ''}`}
               style={{ paddingLeft: 8 + (h.level - 1) * 14 }}
+              role="treeitem"
+              tabIndex={0}
+              aria-current={isActive ? 'true' : undefined}
               onClick={() => onJump(h.line)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onJump(h.line)
+                }
+              }}
               title={h.text}
             >
               {h.text}

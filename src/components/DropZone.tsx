@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from './Icon'
 import { isAcceptedFile, readFileAsText } from '../lib/fileIO'
 
 interface Props {
@@ -80,7 +81,9 @@ export default function DropZone({ onFile, onFiles, children }: Props) {
       {dragging && (
         <div className="drop-overlay">
           <div className="drop-card">
-            <div className="drop-icon">⬇</div>
+            <div className="drop-icon">
+              <Icon name="arrow-down" size={28} />
+            </div>
             <div>松开以打开 Markdown 文件</div>
           </div>
         </div>

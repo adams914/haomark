@@ -8,19 +8,17 @@
 
 /* === 块级：行级样式 === */
 /* 标题：字号 / 字重 / 上下间距靠 padding（不用 margin，保持行高稳定）*/
+/* Notion 风：标题无任何下划线/边框，纯靠字号字重区分 */
 .cm-line.md-h {
   font-weight: 700;
   padding-top: 0.3em;
+  border-bottom: none !important;  /* 强制去除任何下划线（防止其他来源的 border） */
 }
 .cm-line.md-h1 {
   font-size: 1.9em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
 }
 .cm-line.md-h2 {
   font-size: 1.5em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
 }
 .cm-line.md-h3 {
   font-size: 1.25em;
@@ -30,19 +28,19 @@
 }
 .cm-line.md-h5 {
   font-size: 0.92em;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 .cm-line.md-h6 {
   font-size: 0.85em;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 
-/* 引用 */
+/* 引用（Notion 风：细左条 + 浅底，正常字色） */
 .cm-line.md-quote {
-  color: var(--text-muted);
-  border-left: 3px solid var(--border);
+  color: var(--text-primary);
+  border-left: 3px solid var(--text-primary);
   padding-left: 12px;
-  background: rgba(0, 0, 0, 0.015);
+  background: var(--bg-secondary);
 }
 
 /* 列表项 */
@@ -53,7 +51,7 @@
 
 /* 引用定义行 [label]: url —— 视觉弱化（变小变灰），但仍可见便于编辑 */
 .cm-line.md-link-ref {
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   font-size: 0.85em;
   opacity: 0.5;
   font-family: var(--font-mono);
@@ -72,17 +70,18 @@
 }
 .md-strike {
   text-decoration: line-through;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
 }
 .md-code {
   font-family: var(--font-mono);
   font-size: 0.88em;
+  color: var(--code-text);
   background: var(--code-bg);
   padding: 0.12em 0.35em;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 .md-link-text {
-  color: var(--link);
+  color: var(--accent-blue);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -106,10 +105,10 @@
   display: inline-block;
   max-width: 100%;
   padding: 6px 10px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  background: var(--code-bg);
-  color: var(--text-muted);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
   font-size: 0.85em;
   font-family: var(--font-mono);
   word-break: break-all;
@@ -219,19 +218,19 @@
   display: block;
 }
 
-/* 行内公式 */
+/* 行内公式（Notion 风：蓝底浅色） */
 .md-math-inline {
   font-family: var(--font-mono);
   font-style: italic;
-  color: var(--accent);
-  background: rgba(9, 105, 218, 0.06);
+  color: var(--accent-blue);
+  background: var(--accent-blue-bg);
   padding: 0.1em 0.3em;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 /* === CodeMirror 基础调整 === */
 .cm-editor-wrap .cm-editor {
-  background: var(--bg);
+  background: var(--bg-page);
 }
 .cm-editor-wrap .cm-scroller {
   font-family: var(--font-sans);
@@ -242,7 +241,7 @@
   line-height: 1.7;
 }
 .cm-editor-wrap .cm-content {
-  max-width: 760px; /* 与预览窄列宽度接近 */
+  max-width: var(--content-width);
   margin: 0 auto;
   padding: 0;
 }

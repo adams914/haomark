@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icon from './Icon'
 import {
   DEFAULT_SETTINGS,
   type Settings,
@@ -55,14 +56,16 @@ export default function SettingsDialog({ settings, onChange, onClose, onReset }:
           ))}
           <div className="settings-nav-spacer" />
           <button className="settings-nav settings-reset" onClick={onReset} title="恢复默认设置">
-            ↺ 重置
+            <Icon name="reset" size={14} /> 重置
           </button>
         </div>
 
         <div className="settings-body">
           <div className="settings-header">
             <h2>{CATEGORY_LABELS[category]}偏好</h2>
-            <button className="settings-close" onClick={onClose} aria-label="关闭">×</button>
+            <button className="settings-close" onClick={onClose} aria-label="关闭">
+              <Icon name="close" size={18} />
+            </button>
           </div>
 
           <div className="settings-content">

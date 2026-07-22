@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icon from './Icon'
 import type { Tab } from '../lib/tabs'
 
 interface Props {
@@ -69,9 +70,16 @@ function TabItem({ tab, active, onSelect, onClose }: ItemProps) {
     <div
       className={`tabbar-item ${active ? 'active' : ''}`}
       role="tab"
+      tabIndex={0}
       aria-selected={active}
       title={tab.filePath ?? tab.fileName}
       onClick={() => onSelect(tab.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(tab.id)
+        }
+      }}
       onAuxClick={handleAuxClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -88,7 +96,7 @@ function TabItem({ tab, active, onSelect, onClose }: ItemProps) {
         aria-label={`关闭 ${tab.fileName}`}
         title="关闭"
       >
-        ×
+        <Icon name="close" size={14} />
       </button>
     </div>
   )
