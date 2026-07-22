@@ -70,9 +70,16 @@ function TabItem({ tab, active, onSelect, onClose }: ItemProps) {
     <div
       className={`tabbar-item ${active ? 'active' : ''}`}
       role="tab"
+      tabIndex={0}
       aria-selected={active}
       title={tab.filePath ?? tab.fileName}
       onClick={() => onSelect(tab.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(tab.id)
+        }
+      }}
       onAuxClick={handleAuxClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
