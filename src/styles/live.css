@@ -8,19 +8,17 @@
 
 /* === 块级：行级样式 === */
 /* 标题：字号 / 字重 / 上下间距靠 padding（不用 margin，保持行高稳定）*/
+/* Notion 风：标题无任何下划线/边框，纯靠字号字重区分 */
 .cm-line.md-h {
   font-weight: 700;
   padding-top: 0.3em;
+  border-bottom: none !important;  /* 强制去除任何下划线（防止其他来源的 border） */
 }
 .cm-line.md-h1 {
   font-size: 1.9em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
 }
 .cm-line.md-h2 {
   font-size: 1.5em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
 }
 .cm-line.md-h3 {
   font-size: 1.25em;

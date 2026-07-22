@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import Icon from './Icon'
 import type { ViewMode } from './LiveEditor'
 import type { Theme } from '../lib/useTheme'
 
@@ -58,8 +59,9 @@ export default function Toolbar({
           className={`icon-btn ${outlineOpen ? 'active' : ''}`}
           onClick={onToggleOutline}
           title="大纲（侧边栏）"
+          aria-label="大纲"
         >
-          ☰
+          <Icon name="menu" size={18} />
         </button>
         <span className="app-name">好记</span>
         <span className={`file-name ${dirty ? 'dirty' : ''}`} title={fileName}>
@@ -99,18 +101,19 @@ export default function Toolbar({
             onThemeChange(next)
           }}
           title={`主题：${theme === 'auto' ? '跟随系统' : theme === 'light' ? '亮色' : '暗色'}`}
+          aria-label="主题切换"
         >
-          {theme === 'light' ? '☀' : theme === 'dark' ? '☾' : '◐'}
+          {theme === 'light' ? <Icon name="sun" size={18} /> : theme === 'dark' ? <Icon name="moon" size={18} /> : <Icon name="system" size={18} />}
         </button>
 
         {/* 字号 */}
         <div className="font-size-ctrl" title={`字号 ${fontSize}px`}>
-          <button className="icon-btn" onClick={() => onFontSizeChange(fontSize - 1)} title="缩小">
-            A−
+          <button className="icon-btn" onClick={() => onFontSizeChange(fontSize - 1)} title="缩小" aria-label="缩小字号">
+            <Icon name="minus" size={16} />
           </button>
           <span className="font-size-val">{fontSize}</span>
-          <button className="icon-btn" onClick={() => onFontSizeChange(fontSize + 1)} title="放大">
-            A+
+          <button className="icon-btn" onClick={() => onFontSizeChange(fontSize + 1)} title="放大" aria-label="放大字号">
+            <Icon name="plus" size={16} />
           </button>
         </div>
 
@@ -124,7 +127,7 @@ export default function Toolbar({
             title="保存全部（Ctrl+Alt+S）"
             aria-label="保存全部"
           >
-            ⇩⇩
+            <Icon name="save-all" size={18} />
           </button>
         )}
         <button className="btn" onClick={handleOpenClick} title="打开文件">
@@ -136,7 +139,7 @@ export default function Toolbar({
           title="设置"
           aria-label="设置"
         >
-          ⚙
+          <Icon name="settings" size={18} />
         </button>
         <input
           ref={inputRef}

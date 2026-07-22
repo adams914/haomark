@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icon from './Icon'
 import type { Tab } from '../lib/tabs'
 
 interface Props {
@@ -88,7 +89,7 @@ function TabItem({ tab, active, onSelect, onClose }: ItemProps) {
         aria-label={`关闭 ${tab.fileName}`}
         title="关闭"
       >
-        ×
+        <Icon name="close" size={14} />
       </button>
     </div>
   )
