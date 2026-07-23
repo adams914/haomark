@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Icon from './Icon'
 import {
   DEFAULT_SETTINGS,
@@ -231,6 +231,26 @@ function AppSection({
   settings: AppSettings
   update: (patch: Partial<AppSettings>) => void
 }) {
+  // 版本号：Tauri 环境 getAppVersion()（和 tauri.conf.json 同步），浏览器兜底
+  const [version, setVersion] = useState('—')
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+          const { getVersion } = await import('@tauri-apps/api/app')
+          const v = await getVersion()
+          if (!cancelled) setVersion(`v${v}`)
+        } else {
+          if (!cancelled) setVersion('浏览器版')
+        }
+      } catch {
+        if (!cancelled) setVersion('未知')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <>
       <Field label="检查更新" desc="自动检查新版本的频率">
@@ -260,6 +280,10 @@ function AppSection({
             ? '%APPDATA%\\好记\\'
             : '浏览器 localStorage'}
         </code>
+      </Field>
+
+      <Field label="版本" desc="当前应用版本号">
+        <code className="settings-data-path">{version}</code>
       </Field>
     </>
   )

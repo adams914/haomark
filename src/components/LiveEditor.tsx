@@ -154,6 +154,43 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
     [onCursorLine],
   )
 
+  // 标题下划线修复：CodeMirror 运行时注入的 ͼN 样式给 .cm-line 画了底框。
+  // 两种状态都要覆盖：
+  // 1. 渲染态（.cm-line.md-h）—— 光标不在标题行
+  // 2. 源码态（.cm-line.cm-activeLine）—— 光标点进标题，标题变回 # 源码，md-h 被移除
+  // 用 Prec.highest 保证注入优先级最高，用高特异性选择器（多 class 叠加）压过 ͼ 规则。
+  const noHeadingLineTheme = useMemo(
+    () =>
+      Prec.highest(
+        EditorView.theme({
+          // 所有 .cm-line 都清除底框（覆盖源码态的 activeLine）
+          '& .cm-line': {
+            borderBottom: 'none',
+            textDecoration: 'none',
+            boxShadow: 'none',
+            outline: 'none',
+          },
+          // 光标行（点进去的源码态）—— 多重 class 提高特异性
+          '& .cm-line.cm-activeLine': {
+            borderBottom: 'none !important',
+            textDecoration: 'none !important',
+            boxShadow: 'none !important',
+          },
+          // 渲染态标题
+          '& .cm-line.md-h, & .cm-line.md-h.cm-activeLine': {
+            borderBottom: 'none !important',
+            textDecoration: 'none !important',
+            boxShadow: 'none !important',
+          },
+          '& .cm-line *': {
+            textDecoration: 'none',
+            borderBottom: 'none',
+          },
+        }),
+      ),
+    [],
+  )
+
   const extensions = useMemo<Extension[]>(() => {
     const base: Extension[] = [
       // 软换行：可由设置开关
@@ -163,15 +200,17 @@ const LiveEditor = forwardRef<LiveEditorHandle, Props>(function LiveEditor(
       markdown({ base: markdownLanguage, codeLanguages: languages }),
     ]
     if (viewMode === 'live') {
-      return [highlightActiveLine(), ...base, livePreviewPlugin, blockField, blockAtomicRanges]
+      // noHeadingLineTheme 放最后，确保 ͼ 优先级最高
+      return [highlightActiveLine(), ...base, livePreviewPlugin, blockField, blockAtomicRanges, noHeadingLineTheme]
     }
     // 源码模式：行号可由设置开关
     return [
       ...(showLineNumbers ? [lineNumbers()] : []),
       highlightActiveLine(),
       ...base,
+      noHeadingLineTheme,
     ]
-  }, [viewMode, keymap, cursorTrackPlugin, showLineNumbers, lineWrapping])
+  }, [viewMode, keymap, cursorTrackPlugin, showLineNumbers, lineWrapping, noHeadingLineTheme])
 
   return (
     <CodeMirror

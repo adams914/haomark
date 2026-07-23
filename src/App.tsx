@@ -163,10 +163,10 @@ export default function App() {
             }
           }
           // welcome 升级检测：未落盘的「欢迎.md」如果内容与当前版本 welcome 不同，
-          // 说明是旧版本残留，用新版 welcome 覆盖（避免老 welcome 永远卡住）
+          // 说明是旧版本残留，用新版 welcome 覆盖（避免老 welcome 永远卡住）。
+          // 不检查 dirty——welcome 是内置演示文档，跟随版本更新更重要。
           if (
             p.filePath === null &&
-            !p.dirty &&
             p.fileName === '欢迎.md' &&
             source !== undefined &&
             source !== welcomeSrc
