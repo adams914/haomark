@@ -18,6 +18,7 @@ export interface BasicSettings {
   theme: Theme              // 亮/暗/跟随系统
   fontSize: number          // 编辑器字号（px）
   fontFamily: 'system' | 'serif' | 'sans' | 'mono'  // 编辑器字体族
+  contentWidth: 'narrow' | 'wide' | 'full'  // 编辑宽度：窄(780)/宽(1200)/自适应(100%)
   recentFilesLimit: number  // 最近文件数量上限（5-20）
 }
 
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
     theme: 'auto',
     fontSize: 15,
     fontFamily: 'system',
+    contentWidth: 'narrow',
     recentFilesLimit: 10,
   },
   editor: {

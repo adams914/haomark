@@ -33,6 +33,7 @@ import {
   type Tab,
 } from './lib/tabs'
 import { loadPersistedTabs, savePersistedTabs } from './lib/tabsStorage'
+import { countText } from './lib/countText'
 import welcomeSrc from './samples/welcome.md?raw'
 
 /** 字体族设置 → CSS font-family 值 */
@@ -41,6 +42,13 @@ const FONT_FAMILY_MAP: Record<string, string> = {
   sans: '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
   serif: 'Georgia, "Songti SC", "SimSun", serif',
   mono: '"JetBrains Mono", "Cascadia Code", Consolas, "Microsoft YaHei", monospace',
+}
+
+/** 编辑宽度设置 → CSS --content-width 值 */
+const CONTENT_WIDTH_MAP: Record<string, string> = {
+  narrow: '780px',   // 窄屏（专注阅读，默认）
+  wide: '1200px',    // 宽屏（信息密度高）
+  full: '10000px',   // 自适应（实际填满，用大值避免 CM 的 100% 计算问题）
 }
 
 export default function App() {
@@ -450,12 +458,10 @@ export default function App() {
     editorRefs.current.delete(tabId)
   }, [confirmAction])
 
-  // === 统计 ===
-  const { charCount, lineCount } = useMemo(() => {
+  // === 统计（纯文字字符数，去掉 Markdown 语法符号）===
+  const { chars: charCount, lines: lineCount } = useMemo(() => {
     const src = activeTab?.source ?? ''
-    const chars = src.length
-    const lines = src === '' ? 0 : src.split(/\r\n|\r|\n/).length
-    return { charCount: chars, lineCount: lines }
+    return countText(src)
   }, [activeTab?.source])
 
   // === 渲染 ===
@@ -473,6 +479,8 @@ export default function App() {
         style={{
           // 字体族映射到 CSS 变量
           '--font-sans': FONT_FAMILY_MAP[settings.basic.fontFamily],
+          // 编辑宽度映射到 CSS 变量（窄/宽/自适应）
+          '--content-width': CONTENT_WIDTH_MAP[settings.basic.contentWidth] ?? '780px',
         } as React.CSSProperties}
       >
         <TabBar

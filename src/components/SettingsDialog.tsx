@@ -131,6 +131,17 @@ function BasicSection({
         </select>
       </Field>
 
+      <Field label="编辑宽度" desc="窄屏专注阅读 / 宽屏信息密度高 / 自适应填满">
+        <select
+          value={settings.contentWidth}
+          onChange={(e) => update({ contentWidth: e.target.value as BasicSettings['contentWidth'] })}
+        >
+          <option value="narrow">窄（780px）</option>
+          <option value="wide">宽（1200px）</option>
+          <option value="full">自适应</option>
+        </select>
+      </Field>
+
       <Field label={`最近文件数（${settings.recentFilesLimit}）`} desc="最近打开文件列表上限">
         <input
           type="range"
